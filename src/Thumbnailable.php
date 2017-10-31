@@ -181,9 +181,10 @@ trait Thumbnailable
     {
         $filedir  = $this->getStorageDir();
 
-        $actual_name   = pathinfo($filename, PATHINFO_FILENAME);
+        $actual_name   = str_slug(pathinfo($filename, PATHINFO_FILENAME));
         $original_name = $actual_name;
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
+        $filename = $actual_name . '.' . $extension;
 
         $i = 1;
         while(file_exists($filedir . DIRECTORY_SEPARATOR . $actual_name . "." . $extension))
