@@ -171,6 +171,14 @@ trait Thumbnailable
                 $image->fit($width, $height, function ($constraint) {
                     $constraint->upsize();
                 })->save($thumb_name, $this->getQuality());
+				
+				/**
+                 * Optimize thumb size
+                 */
+                if (filesize($thumb_name) > filesize($full_file)) {
+                    unlink($thumb_name);
+                    copy($full_file, $thumb_name);
+                }
             } catch (\Exception $e) {
                 echo "Error {$full_file}";
             }
