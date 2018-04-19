@@ -13,11 +13,9 @@ trait Thumbnailable
 //        'storage_slug_by' => 'name',
 //        'fields'          => [
 //            'image' => [
-//                'default_size' => 'S',
 //                'sizes'        => [
-//                    'S' => '50x50',
-//                    'M' => '100x100',
-//                    'L' => '200x200',
+//                    'S'  => '100x100',
+//                    'FB' => '600x315',
 //                ]
 //            ]
 //        ],
@@ -163,12 +161,13 @@ trait Thumbnailable
         foreach ($sizes as $size_code => $size) {
             $thumb_name = $this->getStorageDir() . DIRECTORY_SEPARATOR . $original_name . '_' . $size_code . '.' . $extension;
             $wh = explode('x', $size);
-            $width = $wh[0];
-            $height = $wh[1];
+            $width = !empty($wh[0]) ? $wh[0] : null;
+            $height = !empty($wh[1]) ? $wh[1] : null;
 
             try {
                 $image = Image::make($full_file);
-                $image->fit($width, $height, function ($constraint) {
+                $image->resize($width, $height, function ($constraint) {
+                    $constraint->aspectRatio();
                     $constraint->upsize();
                 })->save($thumb_name, $this->getQuality());
 				
