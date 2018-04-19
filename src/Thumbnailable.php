@@ -8,18 +8,24 @@ use Intervention\Image\ImageManagerStatic as Image;
 
 trait Thumbnailable
 {
-//    protected $thumbnailable = [
-//        'storage_dir'     => 'public/demo',
-//        'storage_slug_by' => 'name',
-//        'fields'          => [
-//            'image' => [
-//                'sizes'        => [
-//                    'S'  => '100x100',
-//                    'FB' => '600x315',
-//                ]
-//            ]
-//        ],
-//    ];
+    protected $thumbnailable = [
+        'storage_dir'     => 'public/demo',
+        'storage_slug_by' => 'name',
+        'fields'          => [
+            'image' => [
+                /*
+                 * Resize Usage:
+                 * Auto width: 100x
+                 * Auto height: x100
+                 */
+                'thumb_method' => 'resize', // resize, fit
+                'sizes'        => [
+                    'S'  => '100x100',
+                    'FB' => '600x315',
+                ]
+            ]
+        ],
+    ];
 
     public static function bootThumbnailable()
     {
@@ -59,12 +65,13 @@ trait Thumbnailable
     {
         if (isset($this->thumbnailable) && isset($this->thumbnailable['fields']) && isset($this->thumbnailable['fields'][$field_name])) {
             $field_value = $this->thumbnailable['fields'][$field_name];
+            $thumb_method = isset($this->thumbnailable['fields'][$field_name]['thumb_method']) ? $this->thumbnailable['fields'][$field_name]['thumb_method'] : null;
 
             $filename = $this->getAttribute($field_name);
             $sizes = $field_value['sizes'];
 
             if (file_exists($this->getStorageDir() . DIRECTORY_SEPARATOR . $filename)) {
-                $this->saveThumb($filename, $sizes);
+                $this->saveThumb($filename, $sizes, $thumb_method);
             }
         }
     }
@@ -74,6 +81,7 @@ trait Thumbnailable
         if (isset($this->thumbnailable) && isset($this->thumbnailable['fields'])) {
             foreach ($this->thumbnailable['fields'] as $field_name => $field_value) {
                 $sizes = $field_value['sizes'];
+                $thumb_method = isset($field_value['thumb_method']) ? $field_value['thumb_method'] : null;
 
                 $file = $this->getAttribute($field_name);
 
@@ -81,7 +89,7 @@ trait Thumbnailable
                     $filename = $this->saveFile($file);
                     $this->setAttribute($field_name, $filename);
 
-                    $this->saveThumb($filename, $sizes);
+                    $this->saveThumb($filename, $sizes, $thumb_method);
                 }
             }
         }
@@ -92,6 +100,7 @@ trait Thumbnailable
         if (isset($this->thumbnailable) && isset($this->thumbnailable['fields'])) {
             foreach ($this->thumbnailable['fields'] as $field_name => $field_value) {
                 $sizes = $field_value['sizes'];
+                $thumb_method = isset($field_value['thumb_method']) ? $field_value['thumb_method'] : null;
 
                 $file = $this->getAttribute($field_name);
 
@@ -99,7 +108,7 @@ trait Thumbnailable
                     $filename = $this->saveFile($file);
                     $this->setAttribute($field_name, $filename);
 
-                    $this->saveThumb($filename, $sizes);
+                    $this->saveThumb($filename, $sizes, $thumb_method);
 
                     $old_filename = $this->getOriginal($field_name);
                     $this->clean_field($old_filename, $sizes);
@@ -149,7 +158,7 @@ trait Thumbnailable
         return '';
     }
 
-    protected function saveThumb($filename, $sizes)
+    protected function saveThumb($filename, $sizes, $thumb_method)
     {
         $original_name = pathinfo($filename, PATHINFO_FILENAME);
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
@@ -165,11 +174,21 @@ trait Thumbnailable
             $height = !empty($wh[1]) ? $wh[1] : null;
 
             try {
-                $image = Image::make($full_file);
-                $image->resize($width, $height, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                })->save($thumb_name, $this->getQuality());
+                if (!$thumb_method) {
+                    $thumb_method = 'resize'; // Default method
+                }
+                if ($thumb_method == 'resize') {
+                    $image = Image::make($full_file);
+                    $image->resize($width, $height, function ($constraint) {
+                        $constraint->aspectRatio();
+                        $constraint->upsize();
+                    })->save($thumb_name, $this->getQuality());
+                } else {
+                    $image = Image::make($full_file);
+                    $image->fit($width, $height, function ($constraint) {
+                        $constraint->upsize();
+                    })->save($thumb_name, $this->getQuality());
+                }
 				
 				/**
                  * Optimize thumb size
