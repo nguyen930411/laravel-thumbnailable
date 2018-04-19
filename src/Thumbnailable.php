@@ -8,24 +8,24 @@ use Intervention\Image\ImageManagerStatic as Image;
 
 trait Thumbnailable
 {
-    protected $thumbnailable = [
-        'storage_dir'     => 'public/demo',
-        'storage_slug_by' => 'name',
-        'fields'          => [
-            'image' => [
-                /*
-                 * Resize Usage:
-                 * Auto width: 100x
-                 * Auto height: x100
-                 */
-                'thumb_method' => 'resize', // resize, fit
-                'sizes'        => [
-                    'S'  => '100x100',
-                    'FB' => '600x315',
-                ]
-            ]
-        ],
-    ];
+    // protected $thumbnailable = [
+        // 'storage_dir'     => 'public/demo',
+        // 'storage_slug_by' => 'name',
+        // 'fields'          => [
+            // 'image' => [
+                // /*
+                 // * Resize Usage:
+                 // * Auto width: 100x
+                 // * Auto height: x100
+                 // */
+                // 'thumb_method' => 'resize', // resize, fit
+                // 'sizes'        => [
+                    // 'S'  => '100x100',
+                    // 'FB' => '600x315',
+                // ]
+            // ]
+        // ],
+    // ];
 
     public static function bootThumbnailable()
     {
