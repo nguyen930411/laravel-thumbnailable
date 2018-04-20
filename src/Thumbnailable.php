@@ -15,8 +15,8 @@ trait Thumbnailable
             // 'image' => [
                 // /*
                  // * Resize Usage:
-                 // * Auto width: 100x
-                 // * Auto height: x100
+                 // * Auto width: x100
+                 // * Auto height: 100x
                  // */
                 // 'thumb_method' => 'resize', // resize, fit
                 // 'sizes'        => [
