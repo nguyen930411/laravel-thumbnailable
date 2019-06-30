@@ -202,7 +202,7 @@ trait Thumbnailable
                     copy($full_file, $thumb_name);
                 }
             } catch (\Exception $e) {
-                // echo "Error {$full_file}";
+				\Log::error("Thumbnailable error: $full_file");
             }
         }
     }
