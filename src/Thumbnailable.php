@@ -193,12 +193,16 @@ trait Thumbnailable
 				/**
                  * Optimize thumb size
                  */
+				if (class_exists('\ImageOptimizer\OptimizerFactory')) {
+					$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
+					$image_optimizer->optimize($thumb_name);
+				}
                 if (filesize($thumb_name) > filesize($full_file)) {
                     unlink($thumb_name);
                     copy($full_file, $thumb_name);
                 }
             } catch (\Exception $e) {
-                echo "Error {$full_file}";
+                // echo "Error {$full_file}";
             }
         }
     }
