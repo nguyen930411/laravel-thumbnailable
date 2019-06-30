@@ -151,6 +151,14 @@ trait Thumbnailable
 
         if ($file->isValid()) {
             $file->move($this->getStorageDir(), $filename);
+			
+			/**
+			 * Optimize main image size
+			 */
+			if (class_exists('\ImageOptimizer\OptimizerFactory')) {
+				$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
+				$image_optimizer->optimize($this->getStorageDir() . DIRECTORY_SEPARATOR . $filename);
+			}
 
             return $filename;
         }
