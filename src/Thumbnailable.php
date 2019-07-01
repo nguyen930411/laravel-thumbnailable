@@ -154,11 +154,9 @@ trait Thumbnailable
 			
 			/**
 			 * Optimize main image size
-			 */
-			if (class_exists('\ImageOptimizer\OptimizerFactory')) {
-				$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
-				$image_optimizer->optimize($this->getStorageDir() . DIRECTORY_SEPARATOR . $filename);
-			}
+			 */			
+			$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
+			$image_optimizer->optimize($this->getStorageDir() . DIRECTORY_SEPARATOR . $filename);
 
             return $filename;
         }
@@ -201,10 +199,9 @@ trait Thumbnailable
 				/**
                  * Optimize thumb size
                  */
-				if (class_exists('\ImageOptimizer\OptimizerFactory')) {
-					$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
-					$image_optimizer->optimize($thumb_name);
-				}
+				$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
+				$image_optimizer->optimize($thumb_name);
+				
                 if (filesize($thumb_name) > filesize($full_file)) {
                     unlink($thumb_name);
                     copy($full_file, $thumb_name);
