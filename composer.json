@@ -10,7 +10,8 @@
     ],
     "require": {
         "php": ">=5.5.9",
-        "intervention/image": "*"
+        "intervention/image": "*",
+		"ps/image-optimizer": "^1.2"
     },
     "autoload": {
         "psr-4": {
