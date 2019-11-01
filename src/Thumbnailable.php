@@ -8,24 +8,27 @@ use Intervention\Image\ImageManagerStatic as Image;
 
 trait Thumbnailable
 {
-    // protected $thumbnailable = [
-        // 'storage_dir'     => 'public/demo',
-        // 'storage_slug_by' => 'name',
-        // 'fields'          => [
-            // 'image' => [
-                // /*
-                 // * Resize Usage:
-                 // * Auto width: x100
-                 // * Auto height: 100x
-                 // */
-                // 'thumb_method' => 'resize', // resize, fit
-                // 'sizes'        => [
-                    // 'S'  => '100x100',
-                    // 'FB' => '600x315',
-                // ]
-            // ]
-        // ],
-    // ];
+     protected $thumbnailable = [
+         'storage_dir'  => 'uploads/demo',
+         'storage_disk' => 'local', // local, s3, do
+         'storage_slug_by' => 'name',
+         'fields'          => [
+             'image' => [
+                 /*
+                  * Resize Usage:
+                  * Auto width: x100
+                  * Auto height: 100x
+                  */
+                 'thumb_method' => 'resize', // resize, fit
+                 'sizes'        => [
+                     'S'  => '100x100',
+                     'FB' => '600x315',
+                 ],
+                 'storage_dir'  => 'uploads/demo', // Optional
+                 'storage_disk' => 'local', // local, s3, do
+             ]
+         ],
+     ];
 
     public static function bootThumbnailable()
     {
@@ -269,5 +272,18 @@ trait Thumbnailable
         }
 
         return \Config::get('thumbnailable.storage_dir', 'storage/images');
+    }
+
+    private function uploadCdn($full_file_path)
+    {
+        $file_name = basename($full_file_path);
+        \Storage::disk('do')->put(CDN_PATH . $file_name, file_get_contents($full_file_path), 'public');
+
+        return CDN_URL . CDN_PATH . $file_name;
+    }
+
+    private function deleteCdn($file_url)
+    {
+        return \Storage::disk('do')->delete(CDN_PATH . basename($file_url));
     }
 }
