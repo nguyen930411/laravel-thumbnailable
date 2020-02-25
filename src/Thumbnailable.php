@@ -24,11 +24,17 @@ trait Thumbnailable
                      // 'S'  => '100x100',
                      // 'FB' => '600x315',
                  // ],
-                 // 'storage_dir'  => 'uploads/demo', // Optional
-                 // 'storage_disk' => 'local', // local, s3, do
              // ]
          // ],
      // ];
+
+    private static $file_disk, $is_cdn;
+
+    private static function isCdn()
+    {
+        self::$file_disk = config('filesystems.default', 'local');
+        return in_array(self::$file_disk, ['s3', 'do']);
+    }
 
     public static function bootThumbnailable()
     {
@@ -140,24 +146,37 @@ trait Thumbnailable
 
         $original_file = $this->getStorageDir() . DIRECTORY_SEPARATOR . $filename;
         File::delete($original_file);
+        $cdn_prefix_path = '/' . trim(getenv('CDN_UPLOAD_PREFIX', ''), '/');
+
+        if (self::isCdn()) {
+            \Storage::disk(self::$file_disk)->delete($cdn_prefix_path . '/' . $original_file);
+        }
 
         foreach ($sizes as $size_code => $size) {
             $thumb_name = $this->getStorageDir() . DIRECTORY_SEPARATOR . $original_name . '_' . $size_code . '.' . $extension;
 
             File::delete($thumb_name);
+            if (self::isCdn()) {
+                \Storage::disk(self::$file_disk)->delete($cdn_prefix_path . '/' . $thumb_name);
+            }
         }
     }
 
     protected function saveFile(UploadedFile $file)
     {
-        $filename = $this->checkFileName($file->getClientOriginalName());
+//        $filename = $this->checkFileName($file->getClientOriginalName());
+        $filename = $file->getClientOriginalName();
+        $actual_name   = str_slug(pathinfo($filename, PATHINFO_FILENAME));
+//        $original_name = $actual_name;
+        $extension     = pathinfo($filename, PATHINFO_EXTENSION);
+        $filename = $actual_name . '_' . time() . '.' . $extension;
 
         if ($file->isValid()) {
             $file->move($this->getStorageDir(), $filename);
-			
+
 			/**
 			 * Optimize main image size
-			 */			
+			 */
 			$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
 			$image_optimizer->optimize($this->getStorageDir() . DIRECTORY_SEPARATOR . $filename);
 
@@ -169,6 +188,7 @@ trait Thumbnailable
 
     protected function saveThumb($filename, $sizes, $thumb_method)
     {
+        $cdn_prefix_path = '/' . trim(getenv('CDN_UPLOAD_PREFIX', ''), '/');
         $original_name = pathinfo($filename, PATHINFO_FILENAME);
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
         $full_file     = $this->getStorageDir() . DIRECTORY_SEPARATOR . $filename;
@@ -198,20 +218,32 @@ trait Thumbnailable
                         $constraint->upsize();
                     })->save($thumb_name, $this->getQuality());
                 }
-				
+
 				/**
                  * Optimize thumb size
                  */
 				$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
 				$image_optimizer->optimize($thumb_name);
-				
+
                 if (filesize($thumb_name) > filesize($full_file)) {
                     unlink($thumb_name);
                     copy($full_file, $thumb_name);
                 }
+
+                if (self::isCdn()) {
+                    // If Cloud Storage, upload thumb to cloud then delete old file
+                    $status = \Storage::disk(self::$file_disk)->put($cdn_prefix_path . '/' . $thumb_name, file_get_contents($thumb_name), 'public');
+                    @unlink($thumb_name);
+                }
             } catch (\Exception $e) {
 				\Log::error("Thumbnailable error: $full_file");
             }
+        }
+
+        if (self::isCdn()) {
+            // If Cloud Storage, upload main file to cloud then delete old file
+            $status = \Storage::disk(self::$file_disk)->put($cdn_prefix_path . '/' . $full_file, file_get_contents($full_file), 'public');
+            @unlink($full_file);
         }
     }
 
@@ -238,12 +270,14 @@ trait Thumbnailable
     protected function getStorageDir()
     {
         if (isset($this->thumbnailable) && isset($this->thumbnailable['storage_dir'])) {
+            $storage_dir = trim($this->thumbnailable['storage_dir'], '/');
+
             if (isset($this->thumbnailable['storage_slug_by'])) {
                 $slug = str_slug($this->getAttribute($this->thumbnailable['storage_slug_by']));
 
-                return $this->thumbnailable['storage_dir'] . DIRECTORY_SEPARATOR . $slug;
+                return $storage_dir . DIRECTORY_SEPARATOR . $slug;
             } else {
-                return $this->thumbnailable['storage_dir'];
+                return $storage_dir;
             }
         }
 
@@ -262,28 +296,17 @@ trait Thumbnailable
     protected function getPublicUrl()
     {
         if (isset($this->thumbnailable) && isset($this->thumbnailable['storage_dir'])) {
+            $storage_dir = trim($this->thumbnailable['storage_dir'], '/');
+
             if (isset($this->thumbnailable['storage_slug_by'])) {
                 $slug = str_slug($this->getAttribute($this->thumbnailable['storage_slug_by']));
 
-                return $this->thumbnailable['storage_dir'] . '/' . $slug;
+                return $storage_dir . '/' . $slug;
             } else {
-                return $this->thumbnailable['storage_dir'];
+                return $storage_dir;
             }
         }
 
         return \Config::get('thumbnailable.storage_dir', 'storage/images');
-    }
-
-    private function uploadCdn($full_file_path)
-    {
-        $file_name = basename($full_file_path);
-        \Storage::disk('do')->put(CDN_PATH . $file_name, file_get_contents($full_file_path), 'public');
-
-        return CDN_URL . CDN_PATH . $file_name;
-    }
-
-    private function deleteCdn($file_url)
-    {
-        return \Storage::disk('do')->delete(CDN_PATH . basename($file_url));
     }
 }
