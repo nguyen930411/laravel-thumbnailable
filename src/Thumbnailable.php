@@ -79,7 +79,11 @@ trait Thumbnailable
             $filename = $this->getAttribute($field_name);
             $sizes = $field_value['sizes'];
 
-            if (file_exists($this->getStorageDir() . DIRECTORY_SEPARATOR . $filename)) {
+            if (self::isCdn()) {
+                if (!empty($filename)) {
+                    $this->saveThumb($filename, $sizes, $thumb_method, 1);
+                }
+            } else {
                 $this->saveThumb($filename, $sizes, $thumb_method);
             }
         }
@@ -186,21 +190,37 @@ trait Thumbnailable
         return '';
     }
 
-    protected function saveThumb($filename, $sizes, $thumb_method)
+    protected function saveThumb($filename, $sizes, $thumb_method, $rethumb = 0)
     {
         $cdn_prefix_path = '/' . trim(getenv('CDN_UPLOAD_PREFIX', ''), '/');
         $original_name = pathinfo($filename, PATHINFO_FILENAME);
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
         $full_file     = $this->getStorageDir() . DIRECTORY_SEPARATOR . $filename;
+        $full_file_cdn = $cdn_prefix_path . '/' . $full_file;
 
         // Image::configure(array('driver' => 'imagick'));
         // $image = Image::make($full_file);
 
+        if ($rethumb && self::isCdn()) {
+            // Download main file from CDN if rethumb
+            if (\Storage::disk(self::$file_disk)->exists($full_file_cdn)) {
+                file_put_contents(public_path($full_file), \Storage::disk(self::$file_disk)->get($full_file_cdn));
+            }
+        }
+
         foreach ($sizes as $size_code => $size) {
             $thumb_name = $this->getStorageDir() . DIRECTORY_SEPARATOR . $original_name . '_' . $size_code . '.' . $extension;
+            $thumb_name_cdn = $cdn_prefix_path . '/' . $thumb_name;
             $wh = explode('x', $size);
             $width = !empty($wh[0]) ? $wh[0] : null;
             $height = !empty($wh[1]) ? $wh[1] : null;
+
+            if ($rethumb && self::isCdn() && $thumb_name != '') {
+                // Download thumb file from CDN if rethumb
+                if (\Storage::disk(self::$file_disk)->exists($thumb_name_cdn)) {
+                    file_put_contents(public_path($thumb_name), \Storage::disk(self::$file_disk)->get($thumb_name_cdn));
+                }
+            }
 
             try {
                 if (!$thumb_method) {
@@ -232,7 +252,7 @@ trait Thumbnailable
 
                 if (self::isCdn()) {
                     // If Cloud Storage, upload thumb to cloud then delete old file
-                    $status = \Storage::disk(self::$file_disk)->put($cdn_prefix_path . '/' . $thumb_name, file_get_contents($thumb_name), 'public');
+                    $status = \Storage::disk(self::$file_disk)->put($thumb_name_cdn, file_get_contents($thumb_name), 'public');
                     @unlink($thumb_name);
                 }
             } catch (\Exception $e) {
@@ -242,7 +262,7 @@ trait Thumbnailable
 
         if (self::isCdn()) {
             // If Cloud Storage, upload main file to cloud then delete old file
-            $status = \Storage::disk(self::$file_disk)->put($cdn_prefix_path . '/' . $full_file, file_get_contents($full_file), 'public');
+            $status = \Storage::disk(self::$file_disk)->put($full_file_cdn, file_get_contents($full_file), 'public');
             @unlink($full_file);
         }
     }
