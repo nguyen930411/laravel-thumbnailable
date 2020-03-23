@@ -67,7 +67,15 @@ trait Thumbnailable
             $filename = $original_name . '_' . $size . '.' . $extension;
         }
 
-        return $this->getPublicUrl() . '/' . $filename;
+        if (self::isCdn()) {
+            $cdn_prefix_path = trim(config('filesystems.disks.' . self::$file_disk . '.url'), '/') . '/' . trim(getenv('CDN_UPLOAD_PREFIX', ''), '/');
+            return $cdn_prefix_path . '/' . $this->getStorageDir() . '/' . $filename;
+
+        } else {
+            $file_url = $this->getPublicUrl() . '/' . $filename;
+            $file_url = preg_replace('/^\//', '', $file_url);
+            return url(PUBLIC_FOLDER . '/' . $file_url);
+        }
     }
 
     public function rethumb($field_name)
