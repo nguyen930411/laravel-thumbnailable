@@ -28,7 +28,7 @@ trait Thumbnailable
 //         ],
 //     ];
 
-    private static $file_disk;
+    private static $file_disk; 
 
     private function isCdn()
     {
