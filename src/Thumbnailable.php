@@ -3,36 +3,36 @@ namespace Nguyen930411\Thumbnailable;
 
 use File;
 use Illuminate\Database\Eloquent\Model;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Intervention\Image\ImageManagerStatic as Image;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 trait Thumbnailable
 {
-     // protected $thumbnailable = [
-         // 'storage_dir'  => 'uploads/demo',
-         // 'storage_disk' => 'local', // local, s3, do
-         // 'storage_slug_by' => 'name',
-         // 'fields'          => [
-             // 'image' => [
-                 // /*
-                  // * Resize Usage:
-                  // * Auto width: x100
-                  // * Auto height: 100x
-                  // */
-                 // 'thumb_method' => 'resize', // resize, fit
-                 // 'sizes'        => [
-                     // 'S'  => '100x100',
-                     // 'FB' => '600x315',
-                 // ],
-             // ]
-         // ],
-     // ];
+//     protected $thumbnailable = [
+//         'storage_dir' => 'uploads/demo',
+//         'storage_disk' => 'local', // local, s3, do
+//         'storage_slug_by' => 'name',
+//         'fields' => [
+//             'image' => [
+//                 /*
+//                 * Resize Usage:
+//                 * Auto width: x100
+//                 * Auto height: 100x
+//                 */
+//                 'thumb_method' => 'resize', // resize, fit
+//                 'sizes' => [
+//                     'S' => '100x100',
+//                     'FB' => '600x315',
+//                 ],
+//             ]
+//         ],
+//     ];
 
     private static $file_disk, $is_cdn;
 
-    private static function isCdn()
+    private function isCdn()
     {
-        self::$file_disk = config('filesystems.default', 'local');
+        self::$file_disk = isset($this->thumbnailable) && isset($this->thumbnailable['storage_disk']) ? $this->thumbnailable['storage_disk'] : 'local';
         return in_array(self::$file_disk, ['s3', 'do']);
     }
 
@@ -67,7 +67,15 @@ trait Thumbnailable
             $filename = $original_name . '_' . $size . '.' . $extension;
         }
 
-        return $this->getPublicUrl() . '/' . $filename;
+        if (self::isCdn()) {
+            $cdn_prefix_path = trim(config('filesystems.disks.' . self::$file_disk . '.url'), '/') . '/' . trim(getenv('CDN_UPLOAD_PREFIX', ''), '/');
+            return $cdn_prefix_path . '/' . $this->getStorageDir() . '/' . $filename;
+
+        } else {
+            $file_url = $this->getPublicUrl() . '/' . $filename;
+            $file_url = preg_replace('/^\//', '', $file_url);
+            return url(PUBLIC_FOLDER . '/' . $file_url);
+        }
     }
 
     public function rethumb($field_name)
@@ -178,11 +186,11 @@ trait Thumbnailable
         if ($file->isValid()) {
             $file->move($this->getStorageDir(), $filename);
 
-			/**
-			 * Optimize main image size
-			 */
-			$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
-			$image_optimizer->optimize($this->getStorageDir() . DIRECTORY_SEPARATOR . $filename);
+            /**
+             * Optimize main image size
+             */
+            $image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
+            $image_optimizer->optimize($this->getStorageDir() . DIRECTORY_SEPARATOR . $filename);
 
             return $filename;
         }
@@ -239,11 +247,11 @@ trait Thumbnailable
                     })->save($thumb_name, $this->getQuality());
                 }
 
-				/**
+                /**
                  * Optimize thumb size
                  */
-				$image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
-				$image_optimizer->optimize($thumb_name);
+                $image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
+                $image_optimizer->optimize($thumb_name);
 
                 if (filesize($thumb_name) > filesize($full_file)) {
                     unlink($thumb_name);
@@ -256,7 +264,7 @@ trait Thumbnailable
                     @unlink($thumb_name);
                 }
             } catch (\Exception $e) {
-				\Log::error("Thumbnailable error: $full_file");
+                \Log::error("Thumbnailable error: $full_file");
             }
         }
 
