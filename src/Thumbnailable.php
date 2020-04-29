@@ -268,7 +268,7 @@ trait Thumbnailable
             }
         }
 
-        if (self::isCdn()) {
+        if (self::isCdn() && file_exists($full_file)) {
             // If Cloud Storage, upload main file to cloud then delete old file
             $status = \Storage::disk(self::$file_disk)->put($full_file_cdn, file_get_contents($full_file), 'public');
             @unlink($full_file);
