@@ -28,7 +28,7 @@ trait Thumbnailable
 //         ],
 //     ];
 
-    private static $file_disk; 
+    private static $file_disk;
 
     private function isCdn()
     {
@@ -181,7 +181,11 @@ trait Thumbnailable
         $actual_name   = str_slug(pathinfo($filename, PATHINFO_FILENAME));
 //        $original_name = $actual_name;
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
-        $filename = $actual_name . '_' . time() . '.' . $extension;
+        try {
+            $filename = $actual_name . '_' . time() . random_int(0, 10000) . random_int(0, 10000) . '.' . $extension;
+        } catch (\Exception $e) {
+            $filename = $actual_name . '_' . time() . mt_rand(0, 10000) . mt_rand(0, 10000) . '.' . $extension;
+        }
 
         if ($file->isValid()) {
             $file->move($this->getStorageDir(), $filename);
