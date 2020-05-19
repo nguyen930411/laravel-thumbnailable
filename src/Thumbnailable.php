@@ -59,7 +59,6 @@ trait Thumbnailable
     public function thumb($field_name, $size = null)
     {
         $filename      = $this->getAttribute($field_name);
-
         $original_name = pathinfo($filename, PATHINFO_FILENAME);
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
 
