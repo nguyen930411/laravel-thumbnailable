@@ -220,55 +220,58 @@ trait Thumbnailable
             }
         }
 
-        foreach ($sizes as $size_code => $size) {
-            $thumb_name = $this->getStorageDir() . DIRECTORY_SEPARATOR . $original_name . '_' . $size_code . '.' . $extension;
-            $thumb_name_cdn = $cdn_prefix_path . '/' . $thumb_name;
-            $wh = explode('x', $size);
-            $width = !empty($wh[0]) ? $wh[0] : null;
-            $height = !empty($wh[1]) ? $wh[1] : null;
+        // Resize & optimize for image only
+        if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'psd'])) {
+            foreach ($sizes as $size_code => $size) {
+                $thumb_name = $this->getStorageDir() . DIRECTORY_SEPARATOR . $original_name . '_' . $size_code . '.' . $extension;
+                $thumb_name_cdn = $cdn_prefix_path . '/' . $thumb_name;
+                $wh = explode('x', $size);
+                $width = !empty($wh[0]) ? $wh[0] : null;
+                $height = !empty($wh[1]) ? $wh[1] : null;
 
-            if ($rethumb && self::isCdn() && $thumb_name != '') {
-                // Download thumb file from CDN if rethumb
-                if (\Storage::disk(self::$file_disk)->exists($thumb_name_cdn)) {
-                    file_put_contents(public_path($thumb_name), \Storage::disk(self::$file_disk)->get($thumb_name_cdn));
-                }
-            }
-
-            try {
-                if (!$thumb_method) {
-                    $thumb_method = 'resize'; // Default method
-                }
-                if ($thumb_method == 'resize') {
-                    $image = Image::make($full_file);
-                    $image->resize($width, $height, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    })->save($thumb_name, $this->getQuality());
-                } else {
-                    $image = Image::make($full_file);
-                    $image->fit($width, $height, function ($constraint) {
-                        $constraint->upsize();
-                    })->save($thumb_name, $this->getQuality());
+                if ($rethumb && self::isCdn() && $thumb_name != '') {
+                    // Download thumb file from CDN if rethumb
+                    if (\Storage::disk(self::$file_disk)->exists($thumb_name_cdn)) {
+                        file_put_contents(public_path($thumb_name), \Storage::disk(self::$file_disk)->get($thumb_name_cdn));
+                    }
                 }
 
-                /**
-                 * Optimize thumb size
-                 */
-                $image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
-                $image_optimizer->optimize($thumb_name);
+                try {
+                    if (!$thumb_method) {
+                        $thumb_method = 'resize'; // Default method
+                    }
+                    if ($thumb_method == 'resize') {
+                        $image = Image::make($full_file);
+                        $image->resize($width, $height, function ($constraint) {
+                            $constraint->aspectRatio();
+                            $constraint->upsize();
+                        })->save($thumb_name, $this->getQuality());
+                    } else {
+                        $image = Image::make($full_file);
+                        $image->fit($width, $height, function ($constraint) {
+                            $constraint->upsize();
+                        })->save($thumb_name, $this->getQuality());
+                    }
 
-                if (filesize($thumb_name) > filesize($full_file)) {
-                    unlink($thumb_name);
-                    copy($full_file, $thumb_name);
-                }
+                    /**
+                     * Optimize thumb size
+                     */
+                    $image_optimizer = (new \ImageOptimizer\OptimizerFactory())->get();
+                    $image_optimizer->optimize($thumb_name);
 
-                if (self::isCdn()) {
-                    // If Cloud Storage, upload thumb to cloud then delete old file
-                    $status = \Storage::disk(self::$file_disk)->put($thumb_name_cdn, file_get_contents($thumb_name), 'public');
-                    @unlink($thumb_name);
+                    if (filesize($thumb_name) > filesize($full_file)) {
+                        unlink($thumb_name);
+                        copy($full_file, $thumb_name);
+                    }
+
+                    if (self::isCdn()) {
+                        // If Cloud Storage, upload thumb to cloud then delete old file
+                        $status = \Storage::disk(self::$file_disk)->put($thumb_name_cdn, file_get_contents($thumb_name), 'public');
+                        @unlink($thumb_name);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error("Thumbnailable error: $full_file");
                 }
-            } catch (\Exception $e) {
-                \Log::error("Thumbnailable error: $full_file");
             }
         }
 
