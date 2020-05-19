@@ -285,7 +285,6 @@ trait Thumbnailable
     protected function checkFileName($filename)
     {
         $filedir  = $this->getStorageDir();
-
         $actual_name   = str_slug(pathinfo($filename, PATHINFO_FILENAME));
         $original_name = $actual_name;
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
