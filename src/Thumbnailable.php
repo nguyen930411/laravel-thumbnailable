@@ -52,6 +52,8 @@ trait Thumbnailable
     }
 
     /**
+     * Get file/thumbnail link
+     *
      * @param $field_name
      * @param null $size
      * @return string
@@ -68,7 +70,7 @@ trait Thumbnailable
         }
 
         if (self::isCdn()) {
-            $cdn_prefix_path = trim(config('filesystems.disks.' . self::$file_disk . '.url'), '/') . '/' . trim(getenv('CDN_UPLOAD_PREFIX', ''), '/');
+            $cdn_prefix_path = trim(config('filesystems.disks.' . self::$file_disk . '.url'), '/') . '/' . trim(getenv('CDN_UPLOAD_PREFIX'), '/');
             return $cdn_prefix_path . '/' . $this->getStorageDir() . '/' . $filename;
 
         } else {
@@ -157,19 +159,21 @@ trait Thumbnailable
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
 
         $original_file = $this->getStorageDir() . DIRECTORY_SEPARATOR . $filename;
-        File::delete($original_file);
-        $cdn_prefix_path = '/' . trim(getenv('CDN_UPLOAD_PREFIX', ''), '/');
+        $cdn_prefix_path = '/' . trim(getenv('CDN_UPLOAD_PREFIX'), '/');
 
         if (self::isCdn()) {
             \Storage::disk(self::$file_disk)->delete($cdn_prefix_path . '/' . $original_file);
+        } else {
+            File::delete($original_file);
         }
 
         foreach ($sizes as $size_code => $size) {
             $thumb_name = $this->getStorageDir() . DIRECTORY_SEPARATOR . $original_name . '_' . $size_code . '.' . $extension;
 
-            File::delete($thumb_name);
             if (self::isCdn()) {
                 \Storage::disk(self::$file_disk)->delete($cdn_prefix_path . '/' . $thumb_name);
+            } else {
+                File::delete($thumb_name);
             }
         }
     }
@@ -204,7 +208,7 @@ trait Thumbnailable
 
     protected function saveThumb($filename, $sizes, $thumb_method, $rethumb = 0)
     {
-        $cdn_prefix_path = '/' . trim(getenv('CDN_UPLOAD_PREFIX', ''), '/');
+        $cdn_prefix_path = '/' . trim(getenv('CDN_UPLOAD_PREFIX'), '/');
         $original_name = pathinfo($filename, PATHINFO_FILENAME);
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
         $full_file     = $this->getStorageDir() . DIRECTORY_SEPARATOR . $filename;
