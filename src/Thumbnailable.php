@@ -180,10 +180,8 @@ trait Thumbnailable
 
     protected function saveFile(UploadedFile $file)
     {
-//        $filename = $this->checkFileName($file->getClientOriginalName());
         $filename = $file->getClientOriginalName();
         $actual_name   = str_slug(pathinfo($filename, PATHINFO_FILENAME));
-//        $original_name = $actual_name;
         $extension     = pathinfo($filename, PATHINFO_EXTENSION);
         try {
             $filename = $actual_name . '_' . time() . random_int(0, 10000) . random_int(0, 10000) . '.' . $extension;
