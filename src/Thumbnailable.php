@@ -223,7 +223,7 @@ trait Thumbnailable
         }
 
         // Resize & optimize for image only
-        if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'psd'])) {
+        if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'psd', 'webp'])) {
             foreach ($sizes as $size_code => $size) {
                 $thumb_name = $this->getStorageDir() . DIRECTORY_SEPARATOR . $original_name . '_' . $size_code . '.' . $extension;
                 $thumb_name_cdn = $cdn_prefix_path . '/' . $thumb_name;
